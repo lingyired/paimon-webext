@@ -1,6 +1,7 @@
 import { onMessage } from 'webext-bridge'
-import { cookies, storage, alarms, webRequest, Cookies, notifications, runtime, i18n, Notifications } from 'webextension-polyfill'
-import { IRoleDataItem, IUserData, IUserDataItem, IAlertSetting, IAlertStatus } from '~/types'
+import type { Cookies, Notifications } from 'webextension-polyfill'
+import { alarms, browserAction, cookies, i18n, notifications, runtime, storage, webRequest } from 'webextension-polyfill'
+import type { IAlertSetting, IAlertStatus, IRoleDataItem, IUserData, IUserDataItem } from '~/types'
 import { getRoleDataByCookie, getRoleInfoByCookie } from '~/utils'
 
 // only on dev mode
@@ -41,7 +42,7 @@ const randomNotificationId = () => {
 
 // type: 0 resin; 1 realmCurrency; 2 transformer
 const showNotification = (alertStatus: IAlertStatus, type: 0 | 1 | 2, scope: any) => {
-  // @ts-ignore: update 方法在 firefox 中不存在
+  // @ts-expect-error: update 方法在 firefox 中不存在
   const isFirefox = !notifications.update
   if (!isFirefox) {
     // chromium 系浏览器
@@ -58,11 +59,13 @@ const showNotification = (alertStatus: IAlertStatus, type: 0 | 1 | 2, scope: any
         // 创建通知
         alertStatus.resin = randomNotificationId()
         notifications.create(alertStatus.resin, notificationData)
-      } else {
+      }
+      else {
         // 更新通知
         notifications.update(alertStatus.resin, notificationData)
       }
-    } else if (type === 1) {
+    }
+    else if (type === 1) {
       const notificationData: Notifications.CreateNotificationOptions = {
         type: 'basic',
         iconUrl: notificationIconList.realmCurrency,
@@ -76,7 +79,8 @@ const showNotification = (alertStatus: IAlertStatus, type: 0 | 1 | 2, scope: any
         alertStatus.realmCurrency = randomNotificationId()
         notifications.create(alertStatus.realmCurrency, notificationData)
       }
-    } else if (type === 2) {
+    }
+    else if (type === 2) {
       const notificationData: Notifications.CreateNotificationOptions = {
         type: 'basic',
         iconUrl: notificationIconList.transformer,
@@ -91,7 +95,8 @@ const showNotification = (alertStatus: IAlertStatus, type: 0 | 1 | 2, scope: any
         notifications.create(alertStatus.transformer, notificationData)
       }
     }
-  } else {
+  }
+  else {
     // firefox 浏览器
     if (type === 0) {
       const notificationData: Notifications.CreateNotificationOptions = {
@@ -106,7 +111,8 @@ const showNotification = (alertStatus: IAlertStatus, type: 0 | 1 | 2, scope: any
         alertStatus.resin = randomNotificationId()
         notifications.create(alertStatus.resin, notificationData)
       }
-    } else if (type === 1) {
+    }
+    else if (type === 1) {
       const notificationData: Notifications.CreateNotificationOptions = {
         type: 'basic',
         iconUrl: notificationIconList.realmCurrency,
@@ -119,7 +125,8 @@ const showNotification = (alertStatus: IAlertStatus, type: 0 | 1 | 2, scope: any
         alertStatus.realmCurrency = randomNotificationId()
         notifications.create(alertStatus.realmCurrency, notificationData)
       }
-    } else if (type === 2) {
+    }
+    else if (type === 2) {
       const notificationData: Notifications.CreateNotificationOptions = {
         type: 'basic',
         iconUrl: notificationIconList.transformer,
@@ -142,12 +149,14 @@ const removeNotification = (alertStatus: IAlertStatus, type: 0 | 1 | 2) => {
       notifications.clear(alertStatus.resin)
       alertStatus.resin = ''
     }
-  } else if (type === 1) {
+  }
+  else if (type === 1) {
     if (alertStatus.realmCurrency !== '') {
       notifications.clear(alertStatus.realmCurrency)
       alertStatus.realmCurrency = ''
     }
-  } else if (type === 2) {
+  }
+  else if (type === 2) {
     if (alertStatus.transformer !== '') {
       notifications.clear(alertStatus.transformer)
       alertStatus.transformer = ''
@@ -159,6 +168,8 @@ const removeNotification = (alertStatus: IAlertStatus, type: 0 | 1 | 2) => {
 const writeDataToStorage = async function <T>(key: string, data: T) {
   await storage.local.set({ [key]: data })
 }
+// selected uid
+let selectedUid = ''
 
 const targetPages = [
   'https://api-os-takumi.mihoyo.com/binding/api/getUserGameRolesByCookie*',
@@ -166,6 +177,9 @@ const targetPages = [
   'https://bbs-api-os.hoyolab.com/game_record/app/genshin/api/dailyNote*',
   'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/dailyNote*',
 ]
+const getSelectedUid = async () => {
+  return await readDataFromStorage<string>('selectedRole', '')
+}
 
 let currentCookie = ''
 
@@ -189,7 +203,7 @@ function rewriteCookieHeader(e: any) {
 webRequest.onBeforeSendHeaders.addListener(
   rewriteCookieHeader,
   { urls: targetPages },
-  // @ts-ignore
+  // @ts-expect-error
   ['blocking', 'requestHeaders', chrome.webRequest.OnBeforeSendHeadersOptions.EXTRA_HEADERS].filter(Boolean),
 )
 
@@ -204,7 +218,7 @@ function removeSetCookieHeader(e: any) {
 webRequest.onHeadersReceived.addListener(
   removeSetCookieHeader,
   { urls: targetPages },
-  // @ts-ignore
+  // @ts-expect-error
   ['blocking', 'responseHeaders', chrome.webRequest.OnHeadersReceivedOptions.EXTRA_HEADERS].filter(Boolean),
 )
 
@@ -295,7 +309,8 @@ const addNewRoleToList = async function (oversea: boolean, roleInfo: IRoleDataIt
   // 如果不存在，则添加
   if (!isExist) {
     originRoleList.push(roleItem)
-  } else {
+  }
+  else {
     // 如果存在，则更新
     const index = originRoleList.findIndex((item) => {
       return item.uid === roleInfo.game_uid
@@ -314,7 +329,8 @@ let alertSettings: IAlertSetting = defaultAlertSetting;
 })()
 
 const doAlertCheck = async function (roleInfo: IUserDataItem) {
-  if (!roleInfo.enabledAlert) return
+  if (!roleInfo.enabledAlert)
+    return
   // 树脂检查
   if (alertSettings.resin) {
     if (roleInfo.data.current_resin >= alertSettings.resinThreshold) {
@@ -324,7 +340,8 @@ const doAlertCheck = async function (roleInfo: IUserDataItem) {
         server: roleInfo.serverRegion,
         resin: roleInfo.data.current_resin,
       })
-    } else {
+    }
+    else {
       removeNotification(roleInfo.alertStatus, 0)
     }
   }
@@ -336,7 +353,8 @@ const doAlertCheck = async function (roleInfo: IUserDataItem) {
         uid: roleInfo.uid,
         server: roleInfo.serverRegion,
       })
-    } else {
+    }
+    else {
       removeNotification(roleInfo.alertStatus, 1)
     }
   }
@@ -348,7 +366,8 @@ const doAlertCheck = async function (roleInfo: IUserDataItem) {
         uid: roleInfo.uid,
         server: roleInfo.serverRegion,
       })
-    } else {
+    }
+    else {
       removeNotification(roleInfo.alertStatus, 2)
     }
   }
@@ -367,15 +386,15 @@ const refreshData = async function () {
   }
 
   // 遍历启用的 role
-  for (const role of enabledRoleList) {
+  for (const [index, role] of enabledRoleList.entries()) {
     const data = await getRoleDataByCookie(role.serverType === 'os', role.cookie, role.uid, role.serverRegion, setCookie)
     if (data) {
       // 更新 roleList
-      const index = originRoleList.findIndex((item) => {
+      const roleIndex = originRoleList.findIndex((item) => {
         return item.uid === role.uid
       })
 
-      originRoleList.splice(index, 1, {
+      originRoleList.splice(roleIndex, 1, {
         ...role,
         data,
         isError: false,
@@ -383,7 +402,22 @@ const refreshData = async function () {
         updateTimestamp: Date.now(),
       })
       doAlertCheck(role)
-    } else {
+
+      if (!selectedUid)
+        selectedUid = await getSelectedUid() // 如果当前还没有 selectedUid 则获取一个
+
+      let isUpdateBadge = false
+      if (selectedUid && selectedUid === role.uid)
+        isUpdateBadge = true // 更新 selectedUid 当前的 resin 数据到 badge
+      else if (index === 0)
+        isUpdateBadge = true // 没有 selectedUid 就更新 index 为 0 的 role 的 resin 数据到 badge
+
+      if (isUpdateBadge && role?.data?.current_resin) {
+        browserAction.setBadgeText({ text: `${role.data.current_resin}` })
+        browserAction.setBadgeBackgroundColor({ color: '#6F9FDF' })
+      }
+    }
+    else {
       // 获取失败，写入错误信息
       role.isError = true
       role.errorMessage = '获取数据失败'
@@ -398,7 +432,8 @@ const refreshData = async function () {
 // 定时器，定时获取玩家数据
 alarms.create('refresh_data', { periodInMinutes: INTERVAL_TIME })
 alarms.onAlarm.addListener((alarmInfo) => {
-  if (alarmInfo.name === 'refresh_data') refreshData()
+  if (alarmInfo.name === 'refresh_data')
+    refreshData()
 });
 
 (() => {
@@ -436,7 +471,7 @@ onMessage('get_role_list', async () => {
 })
 
 onMessage('get_selected_role', async () => {
-  return await readDataFromStorage<string>('selectedRole', '')
+  return await getSelectedUid()
 })
 
 onMessage('refresh_request', async () => {
@@ -445,7 +480,9 @@ onMessage('refresh_request', async () => {
 })
 
 onMessage<{ uid: string }, 'set_selected_role'>('set_selected_role', async ({ data: { uid } }) => {
+  selectedUid = uid
   await writeDataToStorage('selectedRole', uid)
+  refreshData()
 })
 
 onMessage<{ uid: string; status: boolean }, 'set_role_status'>('set_role_status', async ({ data: { uid, status } }) => {
@@ -494,7 +531,8 @@ onMessage<{ oversea: boolean }, 'request_cookie_read'>('request_cookie_read', as
   else
     cookie = await getMiHoYoCookie()
   // cookie 获取失败，返回 false
-  if (cookie === '') return -1
+  if (cookie === '')
+    return -1
 
   const setCookie = (cookie: string) => {
     currentCookie = cookie
@@ -519,7 +557,8 @@ onMessage<{ oversea: boolean }, 'request_cookie_read'>('request_cookie_read', as
     }
 
     return result.length
-  } else {
+  }
+  else {
     return -1
   }
 })
